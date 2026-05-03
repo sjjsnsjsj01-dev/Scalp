@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import os
-import json
 import subprocess
 import signal
 import sys
@@ -18,14 +17,10 @@ MERGE_STAGES = 1
 MERGE_DEPTH = 130000
 
 REPO = "sjjsnsjsj01-dev/audio-run"
-BACKUP_DIR = "backup"
-PROGRESS_FILE = "progress.json"
 
 SHM = "/dev/shm" if os.path.exists("/dev/shm") else "/tmp"
 CURRENT = f"{SHM}/current.wav"
 TMP = f"{SHM}/tmp.wav"
-
-os.makedirs(BACKUP_DIR, exist_ok=True)
 
 # ================= 🪵 LOG =================
 def log(msg, level="INFO"):
@@ -72,24 +67,9 @@ def git_push(stage):
         subprocess.run(["git","add","."],stderr=subprocess.DEVNULL)
         subprocess.run(["git","commit","-m",f"stage {stage}"],stderr=subprocess.DEVNULL)
         subprocess.run(["git","push","origin","main","--force"],stderr=subprocess.DEVNULL)
-        log("تم بنجاح")
+        log("✅ تم الرفع بنجاح")
     except:
-        log("⚠️ فشل الرفع", "WARN")
-
-# ================= 📊 PROGRESS =================
-def save_progress(stage, file):
-    with open(PROGRESS_FILE,"w") as f:
-        json.dump({"stage":stage,"file":file},f)
-
-def load_progress():
-    if os.path.exists(PROGRESS_FILE):
-        try:
-            with open(PROGRESS_FILE) as f:
-                d=json.load(f)
-                return d["stage"], d["file"]
-        except:
-            pass
-    return 0, None
+        log("❌ فشل الرفع", "ERROR")
 
 # ================= 🎬 FFMPEG =================
 def ffmpeg_speed(inp, out):
@@ -115,45 +95,34 @@ def ffmpeg_merge(inp, out):
     return subprocess.run(cmd).returncode==0
 
 # ================= 🚀 PROCESS =================
-def process_stage(stage_index, input_file):
+def process_stage(stage, input_file):
+
+    log(f"مرحلة {stage} بدأ التسريع")
 
     shutil.copy2(input_file, CURRENT)
 
     # ⚡ SPEED
-    log(f"مرحلة {stage_index} بدأ التسريع")
-
     for s in range(SPEED_STAGES):
         for r in range(SPEED_REPEAT):
-
-            if shutdown_requested:
-                return None
-
             if not ffmpeg_speed(CURRENT, TMP):
                 return None
-
             os.replace(TMP, CURRENT)
 
-    # 🔗 MERGE
     log("بدأ الدمج")
 
+    # 🔗 MERGE
     for s in range(MERGE_STAGES):
         for d in range(MERGE_DEPTH):
-
-            if shutdown_requested:
-                return None
-
             if not ffmpeg_merge(CURRENT, TMP):
                 return None
-
             os.replace(TMP, CURRENT)
 
-    # 💾 SAVE
-    out_file = f"out{stage_index}.wav"
+    out_file = f"out{stage}.wav"
     shutil.copy2(CURRENT, out_file)
 
-    log("😁")
+    log(f"😁 انتهت مرحلة {stage}")
 
-    return out_file
+    return os.path.abspath(out_file)
 
 # ================= 🎮 MAIN =================
 def main():
@@ -161,47 +130,38 @@ def main():
 
     git_setup()
 
-    stage, resume_file = load_progress()
+    if not os.path.exists("input.wav"):
+        log("❌ input.wav missing","ERROR")
+        sys.exit(1)
 
-    if not resume_file or not os.path.exists(resume_file):
-        if not os.path.exists("input.wav"):
-            log("❌ input.wav missing","ERROR")
-            sys.exit(1)
-
-        current_input = os.path.abspath("input.wav")
-        stage = 0
-        log("بدأ من input.wav")
-    else:
-        current_input = resume_file
-        log(f"استكمال من المرحلة {stage}")
+    current_input = os.path.abspath("input.wav")
+    stage = 0
 
     while True:
 
         if shutdown_requested:
-            save_progress(stage, current_input)
             sys.exit(0)
 
         stage += 1
 
         out_file = process_stage(stage, current_input)
 
-        if not out_file or not os.path.exists(out_file):
+        if not out_file:
             log("❌ فشل", "ERROR")
-            save_progress(stage-1, current_input)
             sys.exit(1)
 
         # حذف القديم
-        if stage == 1 and os.path.exists("input.wav"):
-            os.remove("input.wav")
+        if stage == 1:
+            if os.path.exists("input.wav"):
+                os.remove("input.wav")
+        else:
+            prev = f"out{stage-1}.wav"
+            if os.path.exists(prev):
+                os.remove(prev)
 
-        prev = f"out{stage-1}.wav"
-        if os.path.exists(prev):
-            os.remove(prev)
+        current_input = out_file
 
-        current_input = os.path.abspath(out_file)
-        save_progress(stage, current_input)
-
-        # 📊 كل 10 مراحل
+        # كل 10 مراحل
         if stage % REPORT_EVERY == 0:
             log("تم الوصول إلى المرحلة بدون مشاكل")
             git_push(stage)
