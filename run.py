@@ -12,13 +12,13 @@ RUNS = 999999999999999999
 REPORT_EVERY = 10
 
 # ⚡ SPEED (نفس كودك)
-SPEED_STAGES = 8
-SPEED_REPEAT = 5
-SPEED_CHUNK = 20
+SPEED_STAGES = 4
+SPEED_REPEAT = 4
+SPEED_CHUNK = 8000
 
 # 🔗 MERGE (🔥 تم التعديل الصحيح)
-MERGE_STAGES = 2
-MERGE_DEPTH = 15   # 👈 بدل REPEAT (يعني 2^10 لكل stage)
+MERGE_STAGES = 1
+MERGE_DEPTH = 130000   # 👈 بدل REPEAT (يعني 2^10 لكل stage)
 
 # 🌐 Git
 REPO = "sjjsnsjsj01-dev/audio-run"
