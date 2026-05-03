@@ -11,21 +11,17 @@ from datetime import datetime
 RUNS = 999999999999999999
 REPORT_EVERY = 10
 
-# ⚡ SPEED (نفس كودك)
 SPEED_STAGES = 4
 SPEED_REPEAT = 4
 SPEED_CHUNK = 8000
 
-# 🔗 MERGE (🔥 تم التعديل الصحيح)
 MERGE_STAGES = 1
-MERGE_DEPTH = 130000   # 👈 بدل REPEAT (يعني 2^10 لكل stage)
+MERGE_DEPTH = 130000
 
-# 🌐 Git
 REPO = "sjjsnsjsj01-dev/audio-run"
 BACKUP_DIR = "backup"
 PROGRESS_FILE = "progress.json"
 
-# RAM
 SHM = "/dev/shm" if os.path.exists("/dev/shm") else "/tmp"
 INPUT = f"{SHM}/input.wav"
 CURRENT = f"{SHM}/current.wav"
@@ -103,13 +99,7 @@ def load_progress():
 # ================= 🎬 FFMPEG =================
 def ffmpeg_speed(inp, out):
     chain = ",".join(["atempo=2"]*SPEED_CHUNK)
-    cmd = [
-        "ffmpeg","-y","-loglevel","quiet",
-        "-i",inp,
-        "-filter:a",chain,
-        "-c:a","pcm_s16le",
-        out
-    ]
+    cmd = ["ffmpeg","-y","-loglevel","quiet","-i",inp,"-filter:a",chain,"-c:a","pcm_s16le",out]
     return subprocess.run(cmd).returncode==0
 
 def ffmpeg_merge(inp, out):
@@ -135,26 +125,46 @@ def run_full_process(run_index, input_file):
     # ⚡ SPEED
     # =========================
     for s in range(SPEED_STAGES):
+        log(f"⚡ SPEED STAGE {s+1}/{SPEED_STAGES}")
+
         for r in range(SPEED_REPEAT):
+
+            if shutdown_requested:
+                return None, False, False
+
             if not ffmpeg_speed(CURRENT, TMP):
                 speed_ok = False
                 break
+
             os.replace(TMP, CURRENT)
+
+            log(f"   ↳ repeat {r+1}/{SPEED_REPEAT}")
+
         if not speed_ok:
             break
 
     # =========================
-    # 🔗 MERGE (🔥 DOUBLE EXPONENTIAL)
+    # 🔗 MERGE
     # =========================
     for s in range(MERGE_STAGES):
 
+        log(f"🔗 MERGE STAGE {s+1}/{MERGE_STAGES}")
+
         for d in range(MERGE_DEPTH):
+
+            if shutdown_requested:
+                return None, False, False
 
             if not ffmpeg_merge(CURRENT, TMP):
                 merge_ok = False
                 break
 
             os.replace(TMP, CURRENT)
+
+            # 🔥 طباعة ذكية كل 1000
+            if d % 1000 == 0:
+                percent = (d / MERGE_DEPTH) * 100
+                log(f"   ↳ merge progress: {d}/{MERGE_DEPTH} ({percent:.2f}%)")
 
         if not merge_ok:
             break
@@ -194,18 +204,18 @@ def main():
 
         run_index += 1
 
+        log(f"🚀 RUN {run_index} START")
+
         out_file, speed_ok, merge_ok = run_full_process(run_index, current_input)
 
-        if not os.path.exists(out_file):
+        if not out_file or not os.path.exists(out_file):
             log("❌ failed", "ERROR")
             save_progress(run_index-1, current_input)
             sys.exit(1)
 
-        # حذف input أول مرة
         if run_index == 1 and os.path.exists("input.wav"):
             os.remove("input.wav")
 
-        # حذف السابق دائماً
         prev = f"out_{run_index-1}.wav"
         if os.path.exists(prev):
             os.remove(prev)
@@ -213,9 +223,6 @@ def main():
         current_input = os.path.abspath(out_file)
         save_progress(run_index, current_input)
 
-        # =========================
-        # 📊 REPORT + PUSH
-        # =========================
         if run_index % REPORT_EVERY == 0:
 
             s = "✔️ SPEED OK" if speed_ok else "❌ SPEED FAIL"
@@ -223,7 +230,7 @@ def main():
 
             size = os.path.getsize(out_file)/(1024**2)
 
-            log(f"RUN {run_index}")
+            log(f"📊 RUN {run_index}")
             log(f"{s} | {m}")
             log(f"📦 size: {size:.2f} MB")
 
