@@ -10,8 +10,8 @@ from datetime import datetime
 REPORT_EVERY = 15
 
 SPEED_STAGES = 4
-SPEED_REPEAT = 1
-SPEED_CHUNK = 8000
+SPEED_REPEAT = 8
+SPEED_CHUNK = 4000
 
 REPO = "sjjsnsjsj01-dev/audio-run"
 
