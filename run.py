@@ -17,7 +17,7 @@ SPEED_STAGES = 1
 SPEED_REPEAT = 1
 
 # 🔥 عدد chunk داخل كل فلتر
-SPEED_CHUNK = 200
+SPEED_CHUNK = 220
 
 # 🔥 قيمة atempo الخارقة
 ATEMPO_VALUE = "9e" + ("9" * 1000000)
