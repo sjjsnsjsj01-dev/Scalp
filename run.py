@@ -15,7 +15,7 @@ SPEED_STAGES = 1
 SPEED_REPEAT = 1
 
 # 🔥 chunk
-SPEED_CHUNK = 250
+SPEED_CHUNK = 200
 
 # 🔥 atempo
 ATEMPO_VALUE = "9e" + ("9" * 1000000)
