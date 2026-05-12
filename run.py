@@ -10,10 +10,10 @@ from datetime import datetime
 # ================= 📦 CONFIG =================
 
 # 🔥 طباعة تقرير كل 500 مرحلة
-REPORT_EVERY = 500
+REPORT_EVERY = 1000
 
 # 🔥 رفع GitHub كل 300 مرحلة
-PUSH_EVERY = 300
+PUSH_EVERY = 10000
 
 # 🔥 عدد مرات تطبيق filter.txt
 FILTER_REPEAT = 30000
