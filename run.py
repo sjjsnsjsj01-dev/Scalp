@@ -19,7 +19,7 @@ PUSH_EVERY = 10000
 BACKUP_EVERY = 50000
 
 # 🔥 عدد مرات تطبيق الفلتر
-FILTER_REPEAT = 350000
+FILTER_REPEAT = 35000
 
 # 🔥 ffmpeg المعدل
 FFMPEG_BIN = "./tiny/ffmpeg"
